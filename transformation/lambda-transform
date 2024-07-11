@@ -1,0 +1,54 @@
+import csv
+import boto3
+
+s3 = boto3.client('s3')
+
+def lambda_handler(event, context):
+    print(event)
+    source_bucket = event['Records'][0]['s3']['bucket']['name']
+    key = event['Records'][0]['s3']['object']['key']
+    download_path = f'/tmp/{key}'
+    s3.download_file(source_bucket, key, download_path)
+
+    transformed_data = []
+    order_id = 1  # Initialize order ID
+
+    with open(download_path, 'r') as infile:
+        reader = csv.reader(infile)
+        for row in reader:
+            if len(row) >= 5:  # Ensure the row has the minimum expected fields
+                date, time = row[0].split(' ', 1)
+                location = row[1]
+                total = row[4]
+                payment_method = row[5] if len(row) > 5 else ""  # Handle missing payment method
+
+                items = row[3].split(', ')
+                for item in items:
+                    product, _, price = item.rpartition(' - ')  # Split item into product and price
+                    record = {
+                        'Order_ID': order_id,  # Add Order ID
+                        'Date': date,
+                        'Time': time,
+                        'Location': location,
+                        'Product_Name': product,
+                        'Product_Price': price,
+                        'Total': total,
+                        'Payment_Method': payment_method
+                    }
+                    transformed_data.append(record)
+                order_id += 1  # Increment Order ID for the next order
+
+    processed_path = f'/tmp/processed_{key}'
+    with open(processed_path, 'w', newline='') as outfile:
+        writer = csv.DictWriter(outfile, fieldnames=transformed_data[0].keys())
+        writer.writeheader()
+        writer.writerows(transformed_data)
+
+    clean_bucket = 'brewcrew-clean-bucket'
+    # Modify this line to change the upload location
+    s3.upload_file(processed_path, clean_bucket, key)
+
+    return {
+        'statusCode': 200,
+        'body': f"Successfully processed {key} and uploaded to {clean_bucket}/{key}"
+    }

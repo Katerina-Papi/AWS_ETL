@@ -1,0 +1,21 @@
+Order Items:
+Order Items ID - PK
+Order ID - FK
+Product ID - FK
+
+Orders:
+Order ID - PK
+Location - FK
+Datetime
+Total Spent
+Payment Type
+
+Products:
+Product ID - PK
+Product Name
+Product Price
+
+Location:
+Location - PK
+Date
+Total Sales

@@ -1,0 +1,25 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >
+  Template to deploy a Lambda which is triggered by an S3 event from a raw data bucket and processes data into an existing clean data bucket.
+
+Resources:
+
+  LambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.8
+      Handler: load2db-2.get_ssm_param
+      Role: arn:aws:iam::339712886763:role/lambda-execution-role
+      Code:
+        S3Bucket: brewcrew-deployment-official  # Our deployment bucket where the lambda code zip is stored
+        S3Key: load2db-2.zip
+
+  # Removed the S3Bucket resource for 'brewcrew-clean-bucket' as it already exists.
+
+  S3BucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties: 
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref LambdaFunction
+      Principal: s3.amazonaws.com
+      # Since 'brewcrew-clean-bucket' is pre-existing, ensure the Lambda function has permissions through its execution role.
